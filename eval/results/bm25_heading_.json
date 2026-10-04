@@ -2,6 +2,8 @@
   "retriever": "bm25",
   "strategy": "heading",
   "chunk_kwargs": {},
+  "retriever_options": {},
+  "embedding_model": null,
   "n_questions": 33,
   "n_chunks": 45,
   "coverage_ceiling": 1.0,
@@ -9,7 +11,8 @@
   "hit@3": 0.788,
   "hit@5": 0.848,
   "mrr": 0.739,
-  "avg_latency_ms": 0.21,
+  "avg_latency_ms": 0.1,
+  "index_build_s": 0.0,
   "misses": [
     {
       "id": "q02",

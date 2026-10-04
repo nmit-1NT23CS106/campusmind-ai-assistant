@@ -1,0 +1,196 @@
+[
+  {
+    "id": "sql01",
+    "category": "sql",
+    "role": "admin",
+    "question": "How many students are there?",
+    "gold_sql": [
+      "SELECT COUNT(*) FROM students"
+    ]
+  },
+  {
+    "id": "sql02",
+    "category": "sql",
+    "role": "admin",
+    "question": "How many enrollments have attendance below 75%?",
+    "gold_sql": [
+      "SELECT COUNT(*) FROM enrollment_summary WHERE attendance_pct < 75"
+    ]
+  },
+  {
+    "id": "sql03",
+    "category": "sql",
+    "role": "admin",
+    "question": "Which students have attendance below 75% in CS301?",
+    "gold_sql": [
+      "SELECT student_name FROM enrollment_summary WHERE course_code = 'CS301' AND attendance_pct < 75"
+    ]
+  },
+  {
+    "id": "sql04",
+    "category": "sql",
+    "role": "admin",
+    "question": "Which course has the lowest average attendance?",
+    "gold_sql": [
+      "SELECT course_code FROM enrollment_summary GROUP BY course_code ORDER BY AVG(attendance_pct) ASC LIMIT 1",
+      "SELECT course_name FROM enrollment_summary GROUP BY course_name ORDER BY AVG(attendance_pct) ASC LIMIT 1"
+    ]
+  },
+  {
+    "id": "sql05",
+    "category": "sql",
+    "role": "admin",
+    "question": "Who are the top 2 students by CGPA?",
+    "gold_sql": [
+      "SELECT name FROM students ORDER BY cgpa DESC LIMIT 2",
+      "SELECT student_id FROM students ORDER BY cgpa DESC LIMIT 2"
+    ]
+  },
+  {
+    "id": "sql06",
+    "category": "sql",
+    "role": "admin",
+    "question": "How many students are there in each department?",
+    "gold_sql": [
+      "SELECT department, COUNT(*) FROM students GROUP BY department"
+    ]
+  },
+  {
+    "id": "sql07",
+    "category": "sql",
+    "role": "admin",
+    "question": "Which students in the Electronics department have a CGPA below 8.5?",
+    "gold_sql": [
+      "SELECT name FROM students WHERE department = 'Electronics' AND cgpa < 8.5"
+    ]
+  },
+  {
+    "id": "sql08",
+    "category": "sql",
+    "role": "admin",
+    "question": "How many Machine Learning enrollments have attendance below 75%?",
+    "gold_sql": [
+      "SELECT COUNT(*) FROM enrollment_summary WHERE course_code = 'CS303' AND attendance_pct < 75"
+    ]
+  },
+  {
+    "id": "sql09",
+    "category": "sql",
+    "role": "admin",
+    "question": "Which students are below 75% attendance in more than one course?",
+    "gold_sql": [
+      "SELECT student_name FROM enrollment_summary WHERE attendance_pct < 75 GROUP BY student_id HAVING COUNT(*) > 1"
+    ]
+  },
+  {
+    "id": "sql10",
+    "category": "sql",
+    "role": "admin",
+    "question": "What is the highest internal mark in Operating Systems?",
+    "gold_sql": [
+      "SELECT MAX(internal_marks) FROM enrollment_summary WHERE course_code = 'CS302'"
+    ]
+  },
+  {
+    "id": "sql11",
+    "category": "sql",
+    "role": "admin",
+    "question": "How many students have a CGPA above 9?",
+    "gold_sql": [
+      "SELECT COUNT(*) FROM students WHERE cgpa > 9"
+    ]
+  },
+  {
+    "id": "sql12",
+    "category": "sql",
+    "role": "admin",
+    "question": "List the courses offered and their credits",
+    "gold_sql": [
+      "SELECT name, credits FROM courses",
+      "SELECT code, credits FROM courses"
+    ]
+  },
+  {
+    "id": "sqs01",
+    "category": "sql",
+    "role": "student",
+    "question": "What is my attendance in each course?",
+    "gold_sql": [
+      "SELECT course_code, attendance_pct FROM enrollment_summary",
+      "SELECT course_name, attendance_pct FROM enrollment_summary"
+    ]
+  },
+  {
+    "id": "sqs02",
+    "category": "sql",
+    "role": "student",
+    "question": "Which of my courses have attendance below 75%?",
+    "gold_sql": [
+      "SELECT course_code FROM enrollment_summary WHERE attendance_pct < 75",
+      "SELECT course_name FROM enrollment_summary WHERE attendance_pct < 75"
+    ]
+  },
+  {
+    "id": "sqs03",
+    "category": "sql",
+    "role": "student",
+    "question": "What is my CGPA?",
+    "gold_sql": [
+      "SELECT cgpa FROM students"
+    ]
+  },
+  {
+    "id": "sqs04",
+    "category": "sql",
+    "role": "student",
+    "question": "How many classes have I attended in CS301?",
+    "gold_sql": [
+      "SELECT classes_attended FROM enrollment_summary WHERE course_code = 'CS301'"
+    ]
+  },
+  {
+    "id": "sqs05",
+    "category": "sql",
+    "role": "student",
+    "question": "What are my internal marks in each course?",
+    "gold_sql": [
+      "SELECT course_code, internal_marks FROM enrollment_summary",
+      "SELECT course_name, internal_marks FROM enrollment_summary"
+    ]
+  },
+  {
+    "id": "mix01",
+    "category": "mixed",
+    "role": "student",
+    "question": "Am I eligible to write the end-semester exams?",
+    "gold_doc": "attendance_policy"
+  },
+  {
+    "id": "mix02",
+    "category": "mixed",
+    "role": "student",
+    "question": "Which of my courses would need a condonation application, and what does it cost?",
+    "gold_doc": "attendance_policy"
+  },
+  {
+    "id": "mix03",
+    "category": "mixed",
+    "role": "student",
+    "question": "Am I at risk of being detained in any course?",
+    "gold_doc": "attendance_policy"
+  },
+  {
+    "id": "mix04",
+    "category": "mixed",
+    "role": "student",
+    "question": "Do I qualify for a merit scholarship based on my CGPA?",
+    "gold_doc": "scholarships_and_fees"
+  },
+  {
+    "id": "mix05",
+    "category": "mixed",
+    "role": "student",
+    "question": "Is my attendance in CS301 enough to sit its exam?",
+    "gold_doc": "attendance_policy"
+  }
+]

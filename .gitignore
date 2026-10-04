@@ -6,3 +6,5 @@ venv/
 .pytest_cache/
 data/campus.db
 data/index/
+data/logs/
+logs/
