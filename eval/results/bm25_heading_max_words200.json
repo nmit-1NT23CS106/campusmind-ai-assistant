@@ -1,0 +1,59 @@
+{
+  "retriever": "bm25",
+  "strategy": "heading",
+  "chunk_kwargs": {
+    "max_words": 200
+  },
+  "n_questions": 33,
+  "n_chunks": 45,
+  "coverage_ceiling": 1.0,
+  "hit@1": 0.667,
+  "hit@3": 0.788,
+  "hit@5": 0.848,
+  "mrr": 0.739,
+  "avg_latency_ms": 0.08,
+  "misses": [
+    {
+      "id": "q02",
+      "question": "My attendance is 70%. Is there any way I can still write the exam?",
+      "rank": null,
+      "top1": "exam_regulations > Exam day rules"
+    },
+    {
+      "id": "q08",
+      "question": "What's the minimum I must score in the end semester paper to pass?",
+      "rank": null,
+      "top1": "attendance_policy > Minimum attendance requirement"
+    },
+    {
+      "id": "q14",
+      "question": "Can I wear a smartwatch during the paper?",
+      "rank": 5,
+      "top1": "library_and_hostel > Library hours"
+    },
+    {
+      "id": "q15",
+      "question": "I failed DBMS. When can I write it again and how many tries do I get?",
+      "rank": null,
+      "top1": "academic_calendar > Semester dates"
+    },
+    {
+      "id": "q16",
+      "question": "How much does it cost to get my paper rechecked?",
+      "rank": 5,
+      "top1": "library_and_hostel > Library fines"
+    },
+    {
+      "id": "q17",
+      "question": "What's the punishment if someone is caught copying?",
+      "rank": null,
+      "top1": "grading_rules > Calculating SGPA and CGPA"
+    },
+    {
+      "id": "q29",
+      "question": "Who do I complain to if I have a problem with a teacher and how long will it take?",
+      "rank": null,
+      "top1": "exam_regulations > Eligibility and hall ticket"
+    }
+  ]
+}

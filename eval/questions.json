@@ -1,0 +1,314 @@
+[
+  {
+    "id": "q01",
+    "question": "What percentage of classes do I need to have attended to be allowed into the final exams?",
+    "answerable": true,
+    "gold_doc": "attendance_policy",
+    "gold_phrase": "at least 75% of the classes held in each course",
+    "expected_answer": "At least 75% in each course."
+  },
+  {
+    "id": "q02",
+    "question": "My attendance is 70%. Is there any way I can still write the exam?",
+    "answerable": true,
+    "gold_doc": "attendance_policy",
+    "gold_phrase": "between 65% and 74.99% in a course may apply for condonation",
+    "expected_answer": "Yes, apply for condonation to the Head of Department with supporting documents."
+  },
+  {
+    "id": "q03",
+    "question": "How many times in my whole degree can the shortage waiver be used?",
+    "answerable": true,
+    "gold_doc": "attendance_policy",
+    "gold_phrase": "at most twice during the entire degree programme",
+    "expected_answer": "At most twice."
+  },
+  {
+    "id": "q04",
+    "question": "What happens if I fall under 65 percent in a subject?",
+    "answerable": true,
+    "gold_doc": "attendance_policy",
+    "gold_phrase": "is detained in that course",
+    "expected_answer": "You are detained, cannot sit the exam and must re-register for the course."
+  },
+  {
+    "id": "q05",
+    "question": "Do the matches I play for the college count as present?",
+    "answerable": true,
+    "gold_doc": "attendance_policy",
+    "gold_phrase": "counted as present, up to a maximum of 10%",
+    "expected_answer": "Yes, on-duty leave counts as present up to 10% of classes held."
+  },
+  {
+    "id": "q06",
+    "question": "If I walk in twenty minutes after the lecture starts, am I marked present?",
+    "answerable": true,
+    "gold_doc": "attendance_policy",
+    "gold_phrase": "more than 15 minutes after a class begins is marked absent",
+    "expected_answer": "No, arriving more than 15 minutes late is marked absent."
+  },
+  {
+    "id": "q07",
+    "question": "How are the 100 marks split between internal and the final exam?",
+    "answerable": true,
+    "gold_doc": "grading_rules",
+    "gold_phrase": "40 marks for internal assessment and 60 marks for the end-semester examination",
+    "expected_answer": "40 internal and 60 end-semester."
+  },
+  {
+    "id": "q08",
+    "question": "What's the minimum I must score in the end semester paper to pass?",
+    "answerable": true,
+    "gold_doc": "grading_rules",
+    "gold_phrase": "at least 21 marks out of 60",
+    "expected_answer": "At least 21 out of 60 (and 40 overall)."
+  },
+  {
+    "id": "q09",
+    "question": "What grade do I get for 85 marks and how many points is it worth?",
+    "answerable": true,
+    "gold_doc": "grading_rules",
+    "gold_phrase": "80 to 89 | A+ | 9",
+    "expected_answer": "A+ with 9 grade points."
+  },
+  {
+    "id": "q10",
+    "question": "How is SGPA worked out?",
+    "answerable": true,
+    "gold_doc": "grading_rules",
+    "gold_phrase": "SGPA is the sum of credits multiplied by grade points",
+    "expected_answer": "Sum of credits times grade points divided by total credits."
+  },
+  {
+    "id": "q11",
+    "question": "I was ill during the internal test. Can I take it again?",
+    "answerable": true,
+    "gold_doc": "grading_rules",
+    "gold_phrase": "may take one make-up test within 10 days",
+    "expected_answer": "Yes, one make-up test within 10 days with a medical certificate."
+  },
+  {
+    "id": "q12",
+    "question": "What CGPA is needed to graduate?",
+    "answerable": true,
+    "gold_doc": "grading_rules",
+    "gold_phrase": "minimum CGPA of 5.0 is required to graduate",
+    "expected_answer": "5.0"
+  },
+  {
+    "id": "q13",
+    "question": "What do I need to carry into the examination hall?",
+    "answerable": true,
+    "gold_doc": "exam_regulations",
+    "gold_phrase": "carry the university ID card and the hall ticket",
+    "expected_answer": "University ID card and hall ticket."
+  },
+  {
+    "id": "q14",
+    "question": "Can I wear a smartwatch during the paper?",
+    "answerable": true,
+    "gold_doc": "exam_regulations",
+    "gold_phrase": "Mobile phones, smartwatches and any other electronic devices are not allowed",
+    "expected_answer": "No."
+  },
+  {
+    "id": "q15",
+    "question": "I failed DBMS. When can I write it again and how many tries do I get?",
+    "answerable": true,
+    "gold_doc": "exam_regulations",
+    "gold_phrase": "at most 3 attempts per course",
+    "expected_answer": "Next supplementary exam; at most 3 attempts per course."
+  },
+  {
+    "id": "q16",
+    "question": "How much does it cost to get my paper rechecked?",
+    "answerable": true,
+    "gold_doc": "exam_regulations",
+    "gold_phrase": "Rs. 800 per paper",
+    "expected_answer": "Rs. 800 per paper."
+  },
+  {
+    "id": "q17",
+    "question": "What's the punishment if someone is caught copying?",
+    "answerable": true,
+    "gold_doc": "exam_regulations",
+    "gold_phrase": "Using unfair means leads to cancellation of that paper",
+    "expected_answer": "The paper is cancelled; repeated or serious cases cancel all papers and may lead to suspension."
+  },
+  {
+    "id": "q18",
+    "question": "When do I get my hall ticket?",
+    "answerable": true,
+    "gold_doc": "exam_regulations",
+    "gold_phrase": "three days before the examinations begin",
+    "expected_answer": "Three days before the exams begin."
+  },
+  {
+    "id": "q19",
+    "question": "When do classes start this semester?",
+    "answerable": true,
+    "gold_doc": "academic_calendar",
+    "gold_phrase": "Classes commence on Monday, 3 August 2026",
+    "expected_answer": "3 August 2026."
+  },
+  {
+    "id": "q20",
+    "question": "On which dates is the second internal test?",
+    "answerable": true,
+    "gold_doc": "academic_calendar",
+    "gold_phrase": "IA2, is held from 26 to 30 October 2026",
+    "expected_answer": "26 to 30 October 2026."
+  },
+  {
+    "id": "q21",
+    "question": "When do the theory exams begin?",
+    "answerable": true,
+    "gold_doc": "academic_calendar",
+    "gold_phrase": "Theory examinations begin on Monday, 7 December 2026",
+    "expected_answer": "7 December 2026."
+  },
+  {
+    "id": "q22",
+    "question": "Is there a break around Diwali?",
+    "answerable": true,
+    "gold_doc": "academic_calendar",
+    "gold_phrase": "Deepavali break runs from 7 to 10 November 2026",
+    "expected_answer": "Yes, 7 to 10 November 2026."
+  },
+  {
+    "id": "q23",
+    "question": "What is the penalty if I pay tuition after the due date?",
+    "answerable": true,
+    "gold_doc": "scholarships_and_fees",
+    "gold_phrase": "late fee of Rs. 100 per day",
+    "expected_answer": "Rs. 100 per day for up to 15 days."
+  },
+  {
+    "id": "q24",
+    "question": "Is there a fee waiver for students with a high CGPA?",
+    "answerable": true,
+    "gold_doc": "scholarships_and_fees",
+    "gold_phrase": "25% tuition waiver",
+    "expected_answer": "Yes: 25% for CGPA 9.0+, 10% for 8.5 to 8.99, with 85% attendance."
+  },
+  {
+    "id": "q25",
+    "question": "How much money do I get back if I withdraw after classes begin?",
+    "answerable": true,
+    "gold_doc": "scholarships_and_fees",
+    "gold_phrase": "within 15 days after classes commence earns a 50% refund",
+    "expected_answer": "50% within 15 days after classes begin, none after that."
+  },
+  {
+    "id": "q26",
+    "question": "How many books can a UG student issue at a time?",
+    "answerable": true,
+    "gold_doc": "library_and_hostel",
+    "gold_phrase": "Undergraduate students may borrow 4 books for 14 days",
+    "expected_answer": "4 books for 14 days."
+  },
+  {
+    "id": "q27",
+    "question": "What is the late return charge per day for a book?",
+    "answerable": true,
+    "gold_doc": "library_and_hostel",
+    "gold_phrase": "Rs. 2 per day per book",
+    "expected_answer": "Rs. 2 per day per book."
+  },
+  {
+    "id": "q28",
+    "question": "What time must first-year hostel residents be back?",
+    "answerable": true,
+    "gold_doc": "library_and_hostel",
+    "gold_phrase": "First-year residents must be back in the hostel by 9:30 pm",
+    "expected_answer": "9:30 pm."
+  },
+  {
+    "id": "q29",
+    "question": "Who do I complain to if I have a problem with a teacher and how long will it take?",
+    "answerable": true,
+    "gold_doc": "student_conduct_and_grievance",
+    "gold_phrase": "resolves it within 15 working days",
+    "expected_answer": "Student Grievance Cell; resolved within 15 working days."
+  },
+  {
+    "id": "q30",
+    "question": "What is the penalty for ragging?",
+    "answerable": true,
+    "gold_doc": "student_conduct_and_grievance",
+    "gold_phrase": "Punishments include suspension, expulsion and a police complaint",
+    "expected_answer": "Suspension, expulsion and a police complaint."
+  },
+  {
+    "id": "q31",
+    "question": "Which book is recommended for operating systems?",
+    "answerable": true,
+    "gold_doc": "syllabus_os",
+    "gold_phrase": "Operating System Concepts by Silberschatz, Galvin and Gagne",
+    "expected_answer": "Operating System Concepts by Silberschatz, Galvin and Gagne."
+  },
+  {
+    "id": "q32",
+    "question": "Does the ML course have prerequisites?",
+    "answerable": true,
+    "gold_doc": "syllabus_ml",
+    "gold_phrase": "Linear Algebra, Probability and Statistics, and programming in Python",
+    "expected_answer": "Linear Algebra, Probability and Statistics, and Python."
+  },
+  {
+    "id": "q33",
+    "question": "What topics come under normalization in DBMS?",
+    "answerable": true,
+    "gold_doc": "syllabus_dbms",
+    "gold_phrase": "functional dependencies and normalization up to BCNF",
+    "expected_answer": "Functional dependencies and normalization up to BCNF."
+  },
+  {
+    "id": "q34",
+    "question": "What is on the cafeteria menu today?",
+    "answerable": false,
+    "gold_doc": null,
+    "gold_phrase": null,
+    "expected_answer": "Not in the documents; the assistant should say it does not know."
+  },
+  {
+    "id": "q35",
+    "question": "What was the highest placement package last year?",
+    "answerable": false,
+    "gold_doc": null,
+    "gold_phrase": null,
+    "expected_answer": "Not in the documents; the assistant should say it does not know."
+  },
+  {
+    "id": "q36",
+    "question": "Which professor teaches the machine learning course?",
+    "answerable": false,
+    "gold_doc": null,
+    "gold_phrase": null,
+    "expected_answer": "Not in the documents; the assistant should say it does not know."
+  },
+  {
+    "id": "q37",
+    "question": "Does the university offer a PhD in marine biology?",
+    "answerable": false,
+    "gold_doc": null,
+    "gold_phrase": null,
+    "expected_answer": "Not in the documents; the assistant should say it does not know."
+  },
+  {
+    "id": "q38",
+    "question": "What is the bus route to the campus?",
+    "answerable": false,
+    "gold_doc": null,
+    "gold_phrase": null,
+    "expected_answer": "Not in the documents; the assistant should say it does not know."
+  },
+  {
+    "id": "q39",
+    "question": "How many seats are there in the computer science department?",
+    "answerable": false,
+    "gold_doc": null,
+    "gold_phrase": null,
+    "expected_answer": "Not in the documents; the assistant should say it does not know."
+  }
+]
