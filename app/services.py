@@ -17,6 +17,12 @@ ROOT = Path(__file__).resolve().parent.parent
 log = logging.getLogger("campusmind")
 
 
+def clean_env_value(value):
+    """Empty string for missing values and for values that are really a stray '# comment'."""
+    value = (value or "").strip()
+    return "" if value.startswith("#") else value
+
+
 @dataclass
 class Settings:
     db_path: Path = ROOT / "data" / "campus.db"
@@ -34,7 +40,7 @@ class Settings:
         return cls(
             db_path=Path(env.get("DB_PATH", cls.db_path)), docs_dir=Path(env.get("DOCS_DIR", cls.docs_dir)),
             log_path=Path(env.get("LOG_PATH", cls.log_path)), retriever=env.get("RETRIEVER", "hybrid"),
-            api_token=env.get("API_TOKEN", ""), admin_token=env.get("ADMIN_TOKEN", ""),
+            api_token=clean_env_value(env.get("API_TOKEN")), admin_token=clean_env_value(env.get("ADMIN_TOKEN")),
             rate_limit_per_min=int(env.get("RATE_LIMIT_PER_MIN", "20")),
         )
 

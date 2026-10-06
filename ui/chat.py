@@ -72,6 +72,8 @@ def show_details(meta):
             else:
                 st.caption("No rows returned.")
         for step in meta["trace"]:
+            if step["action"] in ("invalid_reply", "answer_rejected", "unknown_action", "step_limit"):
+                st.warning(f"Step {step['step']}: {step['action']}: {step.get('detail', '')}")
             if step["action"] == "search_docs":
                 st.markdown(f"**Searched documents:** {step['detail']}")
                 for cite in step.get("retrieved", []):
@@ -94,7 +96,7 @@ st.caption("Ask about university policies and student data. Demo with fictional 
 
 with st.sidebar:
     st.header("Sign in (demo)")
-    api_token = st.text_input("API token", type="password", value=os.environ.get("API_TOKEN", ""))
+    api_token = st.text_input("API token", type="password", value=("" if os.environ.get("API_TOKEN", "").strip().startswith("#") else os.environ.get("API_TOKEN", "").strip()))
     role = st.radio("I am a", ["Student", "Admin"]).lower()
     student_id, admin_token = None, ""
     if role == "student":

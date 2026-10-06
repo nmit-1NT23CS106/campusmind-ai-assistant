@@ -191,3 +191,37 @@ def test_conversation_alternates_roles(parts):
     agent.ask("q", ADMIN)
     roles = [m["role"] for m in llm.calls[-1]["messages"]]
     assert roles == ["user", "assistant", "user", "assistant", "user"]
+
+
+def test_parse_action_ignores_reasoning_blocks_even_if_they_contain_json():
+    text = '<think>maybe {"action": "refuse"} would be wrong</think>\n{"action": "search_docs", "query": "x"}'
+    assert parse_action(text) == {"action": "search_docs", "query": "x"}
+
+
+# ---------- hardening found from a real run ----------
+def test_parse_action_tolerates_raw_newlines_inside_strings():
+    text = '{"action": "answer", "answer": "line one\nline two", "sources": ["[1]"]}'
+    assert parse_action(text)["answer"] == "line one\nline two"
+
+
+def test_last_step_note_is_added_before_the_final_step(parts):
+    agent, llm = make(parts, [act("search_docs", query=f"attendance {i}") for i in range(3)], max_steps=3)
+    agent.ask("q", ADMIN)
+    assert "last step" in llm.calls[2]["messages"][-1]["content"]
+    assert "last step" not in llm.calls[1]["messages"][-1]["content"]
+
+
+def test_repeating_a_search_is_called_out_at_the_end_of_the_observation(parts):
+    agent, llm = make(parts, [act("search_docs", query="attendance"), act("search_docs", query="Attendance"),
+                              act("answer", answer="ok", sources=["[1]"])])
+    agent.ask("q", ADMIN)
+    second = llm.calls[2]["messages"][-1]["content"]
+    assert second.startswith("Passages found:") and "already searched" in second
+
+
+def test_invalid_reply_feedback_names_the_problem_and_trace_keeps_the_reply(parts):
+    agent, llm = make(parts, ["definitely not json", act("search_docs", query="fees"),
+                              act("answer", answer="ok", sources=["[1]"])])
+    r = agent.ask("q", ADMIN)
+    assert "not valid (" in last_observation(llm, 1)
+    assert r.trace[0]["action"] == "invalid_reply" and r.trace[0]["reply"] == "definitely not json"

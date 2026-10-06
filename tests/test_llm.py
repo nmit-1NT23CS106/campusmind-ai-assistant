@@ -1,3 +1,4 @@
+import json
 import pytest
 
 from app import llm
@@ -123,3 +124,100 @@ def test_llm_configured():
     assert llm_configured({"OPENAI_API_KEY": "x"})
     assert not llm_configured({"LLM_PROVIDER": "openai"})
     assert llm_configured({"LLM_PROVIDER": "openai", "OPENAI_API_KEY": "x"})
+
+
+# ---------- reasoning models (Groq gpt-oss / qwen) ----------
+def ok_payload(content="x", finish="stop"):
+    return {"choices": [{"message": {"content": content}, "finish_reason": finish}], "usage": {}}
+
+
+def test_groq_default_model_is_qwen():
+    # chosen by running scripts.probe_llm: gpt-oss models return their JSON in the reasoning field
+    assert GroqClient("k").model == "qwen/qwen3.8-27b"
+
+
+def test_uses_max_completion_tokens_with_a_generous_default(capture, monkeypatch):
+    calls, queue = capture
+    monkeypatch.delenv("LLM_MAX_TOKENS", raising=False)
+    queue.append(FakeResp(payload=ok_payload()))
+    GroqClient("k").complete("S", MSGS)
+    assert calls[0]["json"]["max_completion_tokens"] == 4096 and "max_tokens" not in calls[0]["json"]
+
+
+def test_max_tokens_can_be_overridden_by_env_and_ignores_junk(capture, monkeypatch):
+    calls, queue = capture
+    queue.append(FakeResp(payload=ok_payload()))
+    monkeypatch.setenv("LLM_MAX_TOKENS", "777")
+    GroqClient("k").complete("S", MSGS)
+    assert calls[0]["json"]["max_completion_tokens"] == 777
+    queue.append(FakeResp(payload=ok_payload()))
+    monkeypatch.setenv("LLM_MAX_TOKENS", "# a stray comment")
+    GroqClient("k").complete("S", MSGS)
+    assert calls[1]["json"]["max_completion_tokens"] == 4096
+
+
+def test_gpt_oss_on_groq_defaults_to_low_reasoning_effort(capture, monkeypatch):
+    calls, queue = capture
+    monkeypatch.delenv("LLM_REASONING_EFFORT", raising=False)
+    queue.append(FakeResp(payload=ok_payload()))
+    GroqClient("k", model="openai/gpt-oss-20b").complete("S", MSGS)
+    assert calls[0]["json"]["reasoning_effort"] == "low"
+
+
+def test_reasoning_effort_env_overrides_and_other_models_get_none(capture, monkeypatch):
+    calls, queue = capture
+    monkeypatch.setenv("LLM_REASONING_EFFORT", "high")
+    queue.append(FakeResp(payload=ok_payload()))
+    GroqClient("k").complete("S", MSGS)
+    assert calls[0]["json"]["reasoning_effort"] == "high"
+    monkeypatch.delenv("LLM_REASONING_EFFORT")
+    queue.append(FakeResp(payload=ok_payload()))
+    GroqClient("k", model="qwen/qwen3.8-27b").complete("S", MSGS)
+    assert "reasoning_effort" not in calls[1]["json"]
+    queue.append(FakeResp(payload=ok_payload()))
+    OpenAICompatClient("k").complete("S", MSGS)
+    assert "reasoning_effort" not in calls[2]["json"]
+
+
+def test_empty_reply_from_running_out_of_tokens_is_a_clear_error(capture):
+    _, queue = capture
+    queue.append(FakeResp(payload=ok_payload(content="", finish="length")))
+    with pytest.raises(LLMError, match="LLM_MAX_TOKENS"):
+        GroqClient("k").complete("S", MSGS)
+
+
+def test_unknown_model_error_tells_you_how_to_fix_it_without_leaking_the_key(capture):
+    _, queue = capture
+    queue.append(FakeResp(404, text='{"error":{"message":"The model `old-model` does not exist","code":"model_not_found"}}'))
+    with pytest.raises(LLMError) as exc:
+        GroqClient("gsk-SECRET", model="old-model").complete("S", MSGS)
+    assert "LLM_MODEL" in str(exc.value) and "gsk-SECRET" not in str(exc.value)
+
+
+# ---------- gpt-oss quirks seen in a real run ----------
+def test_json_is_recovered_from_the_reasoning_field_when_content_is_empty(capture):
+    _, queue = capture
+    reasoning = 'Need policy. Use search_docs.{"action":"search_docs","query":"minimum attendance"}'
+    queue.append(FakeResp(payload={"choices": [{"message": {"content": "", "reasoning": reasoning}, "finish_reason": "stop"}], "usage": {}}))
+    text = GroqClient("k", model="openai/gpt-oss-120b").complete("S", MSGS).text
+    assert json.loads(text) == {"action": "search_docs", "query": "minimum attendance"}
+
+
+def test_content_wins_over_reasoning(capture):
+    _, queue = capture
+    queue.append(FakeResp(payload={"choices": [{"message": {"content": '{"action": "refuse", "reason": "x"}',
+                                                            "reasoning": '{"action": "search_docs"}'}, "finish_reason": "stop"}], "usage": {}}))
+    assert "refuse" in GroqClient("k").complete("S", MSGS).text
+
+
+def test_reasoning_without_json_stays_empty(capture):
+    _, queue = capture
+    queue.append(FakeResp(payload={"choices": [{"message": {"content": "", "reasoning": "just thinking, no answer"}, "finish_reason": "stop"}], "usage": {}}))
+    assert GroqClient("k").complete("S", MSGS).text == ""
+
+
+def test_tool_use_failed_error_suggests_a_working_model(capture):
+    _, queue = capture
+    queue.append(FakeResp(400, text='{"error":{"message":"Tool choice is none, but model called a tool","code":"tool_use_failed"}}'))
+    with pytest.raises(LLMError, match="qwen/qwen3.8-27b"):
+        GroqClient("k", model="openai/gpt-oss-20b").complete("S", MSGS)

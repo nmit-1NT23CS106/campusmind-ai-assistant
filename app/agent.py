@@ -13,6 +13,8 @@ from dataclasses import asdict, dataclass, field
 from .prompts import build_system_prompt
 from .sql_tool import SQLToolError
 
+LAST_STEP_NOTE = "\n\nThis is your last step. Reply now with action 'answer' (using what you have) or 'refuse'."
+REPEAT_SEARCH_NOTE = "\n\nYou already searched for this. Use the passages above to answer, or refuse if they do not contain the answer."
 OBSERVATION_ROWS = 20  # rows shown to the model per query (the UI still gets more)
 PAYLOAD_ROWS = 50
 
@@ -36,11 +38,12 @@ class AgentResult:
 
 def parse_action(text):
     """Pull the first JSON object out of a model reply (tolerates code fences and stray prose)."""
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)  # some models print their reasoning
     cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip(), flags=re.IGNORECASE)
     start, end = cleaned.find("{"), cleaned.rfind("}")
     if start == -1 or end <= start:
         raise ValueError("no JSON object found")
-    data = json.loads(cleaned[start:end + 1])
+    data = json.loads(cleaned[start:end + 1], strict=False)  # strict=False tolerates raw newlines inside strings
     if not isinstance(data, dict) or "action" not in data:
         raise ValueError("JSON object has no 'action'")
     return data
@@ -82,8 +85,12 @@ class Agent:
             try:
                 action = parse_action(reply.text)
             except (ValueError, json.JSONDecodeError) as exc:
-                result.trace.append({"step": step, "action": "invalid_reply", "detail": str(exc)})
-                messages.append({"role": "user", "content": "Your reply was not valid. Reply with exactly one JSON object and nothing else."})
+                result.trace.append({"step": step, "action": "invalid_reply", "detail": str(exc),
+                                     "reply": reply.text[:300]})
+                note = f"Your reply was not valid ({str(exc)[:80]}). Reply with exactly one JSON object and nothing else."
+                if step == self.max_steps - 1:
+                    note += LAST_STEP_NOTE
+                messages.append({"role": "user", "content": note})
                 continue
 
             kind = action.get("action")
@@ -113,6 +120,8 @@ class Agent:
                 observation = f"ERROR: unknown action '{kind}'. Use search_docs, query_sql, answer or refuse."
                 result.trace.append({"step": step, "action": "unknown_action", "detail": str(kind)})
 
+            if step == self.max_steps - 1:
+                observation += LAST_STEP_NOTE
             messages.append({"role": "user", "content": observation})
 
         result.refused = True
@@ -126,6 +135,8 @@ class Agent:
         if not isinstance(query, str) or not query.strip():
             result.trace.append({"step": step, "action": "search_docs", "detail": "empty query"})
             return "ERROR: the search query was empty."
+        repeated = any(t["action"] == "search_docs" and t.get("detail", "").lower() == query.strip().lower()
+                       for t in result.trace)
         hits = [chunk for chunk, _ in self.retriever.search(query.strip(), k=self.doc_k)]
         blocks = []
         for chunk in hits:
@@ -135,7 +146,7 @@ class Agent:
             blocks.append(f"[{number}] {chunk.citation}\n{chunk.text}")
         result.trace.append({"step": step, "action": "search_docs", "detail": query.strip(),
                              "retrieved": [c.citation for c in hits]})
-        return "Passages found:\n\n" + "\n\n".join(blocks)
+        return "Passages found:\n\n" + "\n\n".join(blocks) + (REPEAT_SEARCH_NOTE if repeated else "")
 
     def _sql(self, sql, scope, result, step):
         result.tools_used.append("query_sql")
