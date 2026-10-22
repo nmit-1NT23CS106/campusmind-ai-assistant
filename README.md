@@ -38,7 +38,7 @@ Docker: `docker compose up --build`, then open http://localhost:8501.
 - **Cost and abuse protection.** Optional `API_TOKEN` / `ADMIN_TOKEN`, a per-IP rate limit, token and latency logging per question (`data/logs/interactions.jsonl`, no row data stored).
 
 ## Evaluation
-Two measured evaluations. Fill in your own numbers by running them; do not quote numbers you have not measured.
+Both evaluations were run on this repository's synthetic data. The agent used `qwen/qwen3.8-27b` through Groq's free tier, and retrieval used `BAAI/bge-small-en-v1.5` embeddings. The commands shown reproduce them.
 
 **1. Retrieval** (33 questions, no LLM needed): `python -m eval.run_eval --all`
 <!-- retrieval-results:start -->
@@ -58,6 +58,8 @@ Two measured evaluations. Fill in your own numbers by running them; do not quote
 | Text-to-SQL (execution accuracy) | 17 | 88% |
 | Data + policy (both tools, right citation) | 5 | 100% |
 | **Overall** | 61 | **97%** |
+
+Read the table per category: the categories range from 5 to 33 questions, so the overall figure is only a rough summary. "Cited the right document" checks the source, not the wording of the answer. Two text-to-SQL questions (sql07 and sql09) did not match the gold result. Latency was measured on a free API tier and may include rate-limit waits.
 
 False refusal rate 0% | SQL error rate 4% | avg 2.1 steps, 2571 tokens, 12.27s per question
 <!-- agent-results:end -->
@@ -82,11 +84,10 @@ the API (auth, rate limit, errors), the chat UI (headless), and the evaluation h
 | `ui/chat.py` | Streamlit chat page |
 | `data/docs/`, `data/seed.py` | policy documents and the synthetic database |
 | `eval/` | retrieval and agent evaluations, question sets |
-| `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml` | deployment and CI |
+| `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml` | container and CI configuration (the Docker image has not been built or tested yet).|
 
 ## Deploying
-Any host that runs Docker works. Set the variables from `.env.example` as the host's secrets, and **always set `API_TOKEN`,
-`ADMIN_TOKEN` and a low `RATE_LIMIT_PER_MIN` on a public deployment**, because every question spends your LLM credits.
+A Dockerfile and compose file are included but untested. Before any public deployment, set API_TOKEN, ADMIN_TOKEN and a low RATE_LIMIT_PER_MIN, because every question spends LLM credits.
 
 ## Limitations (stated honestly)
 - All data is synthetic, and the document corpus is small and written by the author, so absolute retrieval numbers are optimistic; compare methods against each other.
@@ -94,3 +95,5 @@ Any host that runs Docker works. Set the variables from `.env.example` as the ho
 - Column-level restrictions are not enforced (table allowlist and row-level scoping are). The synthetic data has no sensitive columns.
 - Answer quality depends on the chosen LLM; prompts may need tuning for your model. Use `eval.agent_eval` to measure, then change one thing at a time.
 - The flat numpy index is exact and instant at this size; a vector database would add complexity without benefit here.
+- - The two gpt-oss models available on Groq returned their JSON in a reasoning field or tried to call tools instead of following the reply format, so this project uses Qwen (found with scripts/probe_llm.py). Other models may need prompt changes.
+- Hybrid and dense retrieval differ by one question out of 33, so that gap is not meaningful. Both clearly beat keyword search on this set.
