@@ -5,6 +5,7 @@ Set LLM_PROVIDER (anthropic | openai | groq | gemini), the matching *_API_KEY, a
 Default model names change over time: if one is rejected, set LLM_MODEL to a current one.
 """
 import os
+import re
 import time
 from dataclasses import dataclass
 
@@ -19,6 +20,11 @@ DEFAULT_MODELS = {
 KEY_VARS = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY",
             "groq": "GROQ_API_KEY", "gemini": "GEMINI_API_KEY"}
 RETRY_STATUSES = {429, 500, 502, 503, 529}
+RATE_LIMIT_RETRIES = 5      # rate limits usually clear within a minute, so be patient
+NETWORK_RETRIES = 4
+RATE_LIMIT_MAX_WAIT = 60.0  # if the provider asks for longer (e.g. a daily limit), stop and say so
+_DURATION = re.compile(r"(\d+(?:\.\d+)?)(ms|h|m|s)")
+_UNITS = {"h": 3600.0, "m": 60.0, "s": 1.0, "ms": 0.001}
 # Reasoning models spend output tokens on thinking, so the budget must be generous.
 DEFAULT_MAX_TOKENS = 4096
 
@@ -27,6 +33,23 @@ def _env_value(name):
     """Environment value, ignoring blanks and stray '# comment' text."""
     value = (os.environ.get(name) or "").strip()
     return "" if value.startswith("#") else value
+
+
+def _wait_seconds(resp):
+    """How long the provider asks us to wait: a Retry-After header, else 'try again in 1m2.5s' in the body."""
+    headers = getattr(resp, "headers", None) or {}
+    value = headers.get("retry-after") or headers.get("Retry-After")
+    if value:
+        try:
+            return float(value)
+        except ValueError:
+            pass
+    match = re.search(r"try again in\s+([0-9.hms]+)", getattr(resp, "text", "") or "")
+    if match:
+        total = sum(float(n) * _UNITS[u] for n, u in _DURATION.findall(match.group(1)))
+        if total:
+            return total
+    return None
 
 
 class LLMError(RuntimeError):
@@ -53,12 +76,13 @@ class _BaseClient:
         self.timeout, self.max_retries, self._sleep = timeout, max_retries, sleep
 
     def _post(self, url, headers, body):
-        last = None
-        for attempt in range(self.max_retries + 1):
+        last, attempt = None, 0
+        while True:
             try:
                 resp = requests.post(url, headers=headers, json=body, timeout=self.timeout)
             except requests.RequestException as exc:
                 last = f"network error: {type(exc).__name__}"
+                limit, delay = max(self.max_retries, NETWORK_RETRIES), 1.5 * (attempt + 1)
             else:
                 if resp.status_code == 200:
                     return resp.json()
@@ -69,8 +93,16 @@ class _BaseClient:
                     last += " | This model tried to call a tool instead of writing JSON. Try LLM_MODEL=qwen/qwen3.8-27b."
                 if resp.status_code not in RETRY_STATUSES:
                     break
-            if attempt < self.max_retries:
-                self._sleep(1.5 * (attempt + 1))
+                limit = max(self.max_retries, RATE_LIMIT_RETRIES) if resp.status_code == 429 else self.max_retries
+                wait = _wait_seconds(resp)
+                delay = wait + 0.5 if wait is not None else 1.5 * (attempt + 1)
+                if delay > RATE_LIMIT_MAX_WAIT:
+                    last += f" | The provider asks you to wait about {wait:.0f}s. Wait, or send fewer or slower requests."
+                    break
+            if attempt >= limit:
+                break
+            self._sleep(delay)
+            attempt += 1
         raise LLMError(f"{self.provider} request failed ({last.replace(self.api_key, '***')})")
 
     def complete(self, system, messages, max_tokens=None):

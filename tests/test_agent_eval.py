@@ -145,14 +145,52 @@ def test_run_eval_summary_and_table(retriever, tool):
     assert "Text-to-SQL" in table and "**50%**" in table
 
 
-def test_a_provider_error_is_a_failed_question_not_a_crash(retriever, tool):
+def test_a_provider_error_is_reported_not_a_crash(retriever, tool):
     class Boom:
         def complete(self, *a, **k):
             raise RuntimeError("provider down")
 
     summary = run_eval(Agent(Boom(), retriever, tool), tool, [{**SQL_CASE, "role": "admin"}], 20260001, progress=lambda s: None)
-    assert summary["overall_pass_rate"] == 0 and "provider down" in summary["details"][0]["reason"]
+    assert summary["errors"] == 1 and summary["n_scored"] == 0 and "provider down" in summary["details"][0]["reason"]
 
 
 def test_empty_summary_does_not_divide_by_zero():
     assert summarize([])["overall_pass_rate"] == 0
+
+
+# ---------------- provider errors must not distort the scores ----------------
+class FlakyOnce:
+    def __init__(self, inner):
+        self.inner, self.failed = inner, False
+
+    def complete(self, system, messages, max_tokens=None):
+        if not self.failed:
+            self.failed = True
+            raise RuntimeError("HTTP 429 rate limit")
+        return self.inner.complete(system, messages)
+
+
+def test_provider_errors_are_retried_then_scored(retriever, tool):
+    llm = FlakyOnce(ScriptedLLM([act("query_sql", sql="SELECT COUNT(*) FROM students"), act("answer", answer="200", sources=[])]))
+    summary = run_eval(Agent(llm, retriever, tool), tool, [{**SQL_CASE, "role": "admin"}], 20260001,
+                       progress=lambda s: None, retry_errors=1, retry_wait=0)
+    assert summary["errors"] == 0 and summary["overall_pass_rate"] == 1.0
+
+
+def test_errors_are_excluded_from_pass_rates_and_reported(retriever, tool):
+    llm = FlakyOnce(ScriptedLLM([act("query_sql", sql="SELECT COUNT(*) FROM students"), act("answer", answer="200", sources=[])]))
+    cases = [{**SQL_CASE, "role": "admin"}, {**SQL_CASE, "id": "t2", "role": "admin"}]
+    summary = run_eval(Agent(llm, retriever, tool), tool, cases, 20260001, progress=lambda s: None)
+    assert (summary["n_questions"], summary["n_scored"], summary["errors"]) == (2, 1, 1)
+    assert summary["overall_pass_rate"] == 1.0  # the one scored question passed; the error is not a failure
+    assert "NOT counted" in markdown_table(summary)
+
+
+def test_sql_errors_the_agent_recovered_from_are_recorded(retriever, tool):
+    llm = ScriptedLLM([act("query_sql", sql="SELECT * FROM users"), act("query_sql", sql="SELECT COUNT(*) FROM students"),
+                       act("answer", answer="200", sources=[])])
+    lines = []
+    summary = run_eval(Agent(llm, retriever, tool), tool, [{**SQL_CASE, "role": "admin"}], 20260001, progress=lines.append)
+    detail = summary["details"][0]
+    assert detail["passed"] and detail["sql_errors"] == 1 and "not available" in detail["sql_error_samples"][0]
+    assert any("SQL error the agent hit" in line for line in lines)

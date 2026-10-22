@@ -104,44 +104,73 @@ def score_case(case, result, sql_tool, scope):
     raise ValueError(f"unknown category {category}")
 
 
-def run_eval(agent, sql_tool, cases, student_id, sleep=0.0, progress=print):
+def evaluate_case(agent, sql_tool, case, student_id):
+    scope = Scope("student", student_id) if case["role"] == "student" else Scope("admin")
+    base = {"id": case["id"], "category": case["category"], "question": case["question"]}
+    try:
+        result = agent.ask(case["question"], scope)
+        passed, reason = score_case(case, result, sql_tool, scope)
+    except Exception as exc:  # provider hiccups (rate limit, network) are errors, not wrong answers
+        return {**base, "passed": False, "error": True, "reason": f"{type(exc).__name__}: {str(exc)[:160]}"}
+    return {**base, "passed": passed, "reason": reason,
+            "tokens": result.input_tokens + result.output_tokens, "latency_ms": result.latency_ms,
+            "steps": result.steps, "sql_runs": len(result.sql_runs),
+            "sql_errors": sum(1 for r in result.sql_runs if r["error"]),
+            "sql_error_samples": [r["error"][:120] for r in result.sql_runs if r["error"]]}
+
+
+def run_eval(agent, sql_tool, cases, student_id, sleep=0.0, progress=print, retry_errors=0, retry_wait=30.0):
     details = []
+
+    def show(i, d):
+        label = "ERROR" if d.get("error") else ("PASS" if d["passed"] else "FAIL")
+        line = f"[{i}/{len(cases)}] {label} {d['id']} {d['question'][:60]}"
+        if label != "PASS":
+            line += f"  -> {d['reason']}"
+        for message in d.get("sql_error_samples", []):
+            line += f"\n      (SQL error the agent hit: {message})"
+        progress(line)
+
     for i, case in enumerate(cases, 1):
-        scope = Scope("student", student_id) if case["role"] == "student" else Scope("admin")
-        try:
-            result = agent.ask(case["question"], scope)
-            passed, reason = score_case(case, result, sql_tool, scope)
-            record = {"tokens": result.input_tokens + result.output_tokens, "latency_ms": result.latency_ms,
-                      "steps": result.steps, "sql_errors": sum(1 for r in result.sql_runs if r["error"]),
-                      "sql_runs": len(result.sql_runs)}
-        except Exception as exc:  # a provider hiccup counts as a failure, not a crash
-            passed, reason, record = False, f"{type(exc).__name__}: {str(exc)[:100]}", {}
-        details.append({"id": case["id"], "category": case["category"], "question": case["question"],
-                        "passed": passed, "reason": reason, **record})
-        progress(f"[{i}/{len(cases)}] {'PASS' if passed else 'FAIL'} {case['id']} {case['question'][:60]}"
-                 + ("" if passed else f"  -> {reason}"))
+        details.append(evaluate_case(agent, sql_tool, case, student_id))
+        show(i, details[-1])
         if sleep and i < len(cases):
             time.sleep(sleep)
+
+    for _ in range(retry_errors):
+        bad = [i for i, d in enumerate(details) if d.get("error")]
+        if not bad:
+            break
+        progress(f"\nRetrying {len(bad)} question(s) that hit provider errors (waiting {retry_wait:.0f}s first)...")
+        if retry_wait:
+            time.sleep(retry_wait)
+        for i in bad:
+            details[i] = evaluate_case(agent, sql_tool, cases[i], student_id)
+            show(i + 1, details[i])
+            if sleep:
+                time.sleep(sleep)
     return summarize(details)
 
 
 def summarize(details):
+    """Provider errors are excluded from pass rates and reported separately: they say nothing about the agent."""
+    errors = [d for d in details if d.get("error")]
+    scored = [d for d in details if not d.get("error")]
     by_cat = defaultdict(list)
-    for d in details:
+    for d in scored:
         by_cat[d["category"]].append(d)
-    done = [d for d in details if "tokens" in d]
-    n = max(len(done), 1)
-    sql_runs = sum(d["sql_runs"] for d in done)
-    answerable = [d for d in details if d["category"] != "refuse"]
+    n = max(len(scored), 1)
+    sql_runs = sum(d["sql_runs"] for d in scored)
+    answerable = [d for d in scored if d["category"] != "refuse"]
     return {
-        "n_questions": len(details),
-        "overall_pass_rate": round(sum(d["passed"] for d in details) / max(len(details), 1), 3),
+        "n_questions": len(details), "n_scored": len(scored), "errors": len(errors),
+        "overall_pass_rate": round(sum(d["passed"] for d in scored) / len(scored), 3) if scored else 0,
         "by_category": {c: {"n": len(v), "pass_rate": round(sum(x["passed"] for x in v) / len(v), 3)} for c, v in by_cat.items()},
         "false_refusal_rate": round(sum(1 for d in answerable if d["reason"].startswith("refused")) / max(len(answerable), 1), 3),
-        "sql_error_rate": round(sum(d["sql_errors"] for d in done) / max(sql_runs, 1), 3),
-        "avg_steps": round(sum(d["steps"] for d in done) / n, 2),
-        "avg_tokens": round(sum(d["tokens"] for d in done) / n),
-        "avg_latency_s": round(sum(d["latency_ms"] for d in done) / n / 1000, 2),
+        "sql_error_rate": round(sum(d["sql_errors"] for d in scored) / max(sql_runs, 1), 3),
+        "avg_steps": round(sum(d["steps"] for d in scored) / n, 2),
+        "avg_tokens": round(sum(d["tokens"] for d in scored) / n),
+        "avg_latency_s": round(sum(d["latency_ms"] for d in scored) / n / 1000, 2),
         "details": details,
     }
 
@@ -154,9 +183,12 @@ def markdown_table(summary):
         if cat in summary["by_category"]:
             c = summary["by_category"][cat]
             lines.append(f"| {names[cat]} | {c['n']} | {c['pass_rate']:.0%} |")
-    lines.append(f"| **Overall** | {summary['n_questions']} | **{summary['overall_pass_rate']:.0%}** |")
+    lines.append(f"| **Overall** | {summary['n_scored']} | **{summary['overall_pass_rate']:.0%}** |")
     lines += ["", f"False refusal rate {summary['false_refusal_rate']:.0%} | SQL error rate {summary['sql_error_rate']:.0%} | "
               f"avg {summary['avg_steps']} steps, {summary['avg_tokens']} tokens, {summary['avg_latency_s']}s per question"]
+    if summary["errors"]:
+        lines += ["", f"{summary['errors']} of {summary['n_questions']} question(s) failed on provider errors (rate limits or "
+                      "network) and are NOT counted above. Run again to retry them."]
     return "\n".join(lines)
 
 
@@ -165,6 +197,8 @@ def main():
     p.add_argument("--limit", type=int, default=None, help="evaluate only every Nth-spaced sample of this many questions")
     p.add_argument("--categories", nargs="*", default=None, choices=["docs", "refuse", "sql", "mixed"])
     p.add_argument("--sleep", type=float, default=0.0, help="seconds to wait between questions")
+    p.add_argument("--retry-errors", type=int, default=1, help="extra passes over questions that hit provider errors")
+    p.add_argument("--retry-wait", type=float, default=30.0, help="seconds to wait before a retry pass")
     a = p.parse_args()
 
     state = build_state()
@@ -177,7 +211,8 @@ def main():
     student_id = pick_demo_student(state.sql_tool)
     print(f"Retrieval: {state.retriever_name} | demo student: {student_id} | {len(cases)} questions\n")
 
-    summary = run_eval(state.agent(), state.sql_tool, cases, student_id, sleep=a.sleep)
+    summary = run_eval(state.agent(), state.sql_tool, cases, student_id, sleep=a.sleep,
+                       retry_errors=a.retry_errors, retry_wait=a.retry_wait)
     table = markdown_table(summary)
     print("\n" + table)
     RESULTS.mkdir(exist_ok=True)

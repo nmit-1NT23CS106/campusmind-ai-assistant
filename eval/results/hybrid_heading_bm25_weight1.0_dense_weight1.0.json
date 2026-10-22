@@ -1,0 +1,33 @@
+{
+  "retriever": "hybrid",
+  "strategy": "heading",
+  "chunk_kwargs": {},
+  "retriever_options": {
+    "bm25_weight": 1.0,
+    "dense_weight": 1.0
+  },
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "n_questions": 33,
+  "n_chunks": 45,
+  "coverage_ceiling": 1.0,
+  "hit@1": 0.848,
+  "hit@3": 0.939,
+  "hit@5": 0.97,
+  "mrr": 0.895,
+  "avg_latency_ms": 11.4,
+  "index_build_s": 0.0,
+  "misses": [
+    {
+      "id": "q02",
+      "question": "My attendance is 70%. Is there any way I can still write the exam?",
+      "rank": 5,
+      "top1": "exam_regulations > Exam day rules"
+    },
+    {
+      "id": "q29",
+      "question": "Who do I complain to if I have a problem with a teacher and how long will it take?",
+      "rank": null,
+      "top1": "grading_rules > Make-up for missed internal tests"
+    }
+  ]
+}

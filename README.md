@@ -41,10 +41,26 @@ Docker: `docker compose up --build`, then open http://localhost:8501.
 Two measured evaluations. Fill in your own numbers by running them; do not quote numbers you have not measured.
 
 **1. Retrieval** (33 questions, no LLM needed): `python -m eval.run_eval --all`
-<!-- paste eval/results/comparison.md here -->
+<!-- retrieval-results:start -->
+| Retriever | hit@1 | hit@3 | hit@5 | MRR | ms/query |
+|---|---|---|---|---|---|
+| bm25 | 67% | 79% | 85% | 0.739 | 0.3 |
+| dense | 82% | 91% | 97% | 0.877 | 12.59 |
+| hybrid | 85% | 94% | 97% | 0.895 | 11.4 |
+<!-- retrieval-results:end -->
 
 **2. Agent end to end** (needs an LLM key): `python -m eval.agent_eval`
-<!-- paste eval/results/agent_eval.md here -->
+<!-- agent-results:start -->
+| Category | Questions | Pass rate |
+|---|---|---|
+| Document questions (cited the right document) | 33 | 100% |
+| Unanswerable questions (refused) | 6 | 100% |
+| Text-to-SQL (execution accuracy) | 17 | 88% |
+| Data + policy (both tools, right citation) | 5 | 100% |
+| **Overall** | 61 | **97%** |
+
+False refusal rate 0% | SQL error rate 4% | avg 2.1 steps, 2571 tokens, 12.27s per question
+<!-- agent-results:end -->
 
 Scoring is deterministic: citation of the right document, refusal of unanswerable questions, and *execution accuracy* for SQL
 (the agent's query returns the same rows as a hand-written gold query). Answer wording is not auto-scored.

@@ -6,8 +6,8 @@ from app.llm import AnthropicClient, GeminiClient, GroqClient, LLMError, OpenAIC
 
 
 class FakeResp:
-    def __init__(self, status=200, payload=None, text=""):
-        self.status_code, self._payload, self.text = status, payload or {}, text
+    def __init__(self, status=200, payload=None, text="", headers=None):
+        self.status_code, self._payload, self.text, self.headers = status, payload or {}, text, headers or {}
 
     def json(self):
         return self._payload
@@ -19,7 +19,10 @@ def capture(monkeypatch):
 
     def fake_post(url, headers=None, json=None, timeout=None):
         calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
-        return queue.pop(0)
+        item = queue.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
 
     monkeypatch.setattr(llm.requests, "post", fake_post)
     return calls, queue
@@ -221,3 +224,63 @@ def test_tool_use_failed_error_suggests_a_working_model(capture):
     queue.append(FakeResp(400, text='{"error":{"message":"Tool choice is none, but model called a tool","code":"tool_use_failed"}}'))
     with pytest.raises(LLMError, match="qwen/qwen3.8-27b"):
         GroqClient("k", model="openai/gpt-oss-20b").complete("S", MSGS)
+
+
+# ---------------- rate limits and flaky networks (seen in a real evaluation run) ----------------
+OK = {"content": [{"type": "text", "text": "ok"}]}
+KEY = "sk-test-key-123"  # realistic key: a one-letter key would be redacted out of ordinary words
+
+
+def test_429_waits_for_the_retry_after_header(capture):
+    _, queue = capture
+    sleeps = []
+    queue += [FakeResp(429, headers={"retry-after": "3"}), FakeResp(payload=OK)]
+    assert AnthropicClient(KEY, sleep=sleeps.append).complete("S", MSGS).text == "ok"
+    assert sleeps == [3.5]
+
+
+@pytest.mark.parametrize("text,expected", [("Please try again in 2.5s.", 3.0), ("try again in 250ms", 0.75),
+                                           ("try again in 1m5s", 65.5)])
+def test_429_waits_as_long_as_the_message_says(capture, text, expected):
+    calls, queue = capture
+    sleeps = []
+    queue += [FakeResp(429, text=text), FakeResp(payload=OK)]
+    try:
+        AnthropicClient(KEY, sleep=sleeps.append).complete("S", MSGS)
+    except LLMError:
+        assert expected > 60  # a long wait is refused instead of slept through
+        assert len(calls) == 1 and sleeps == []
+    else:
+        assert sleeps == [pytest.approx(expected)]
+
+
+def test_a_long_rate_limit_stops_immediately_and_says_how_long(capture):
+    calls, queue = capture
+    queue.append(FakeResp(429, text="Rate limit reached. Please try again in 7m23.3s."))
+    with pytest.raises(LLMError, match="wait about 443s"):
+        AnthropicClient(KEY, sleep=lambda s: None).complete("S", MSGS)
+    assert len(calls) == 1
+
+
+def test_429_is_retried_up_to_five_times_then_gives_up(capture):
+    calls, queue = capture
+    sleeps = []
+    queue += [FakeResp(429, text="slow down")] * 6
+    with pytest.raises(LLMError, match="429"):
+        AnthropicClient(KEY, sleep=sleeps.append).complete("S", MSGS)
+    assert len(calls) == 6 and len(sleeps) == 5
+
+
+def test_network_errors_are_retried_with_growing_pauses(capture):
+    calls, queue = capture
+    sleeps = []
+    queue += [llm.requests.ConnectionError(), llm.requests.ConnectionError(), FakeResp(payload=OK)]
+    assert AnthropicClient(KEY, sleep=sleeps.append).complete("S", MSGS).text == "ok"
+    assert sleeps == [1.5, 3.0] and len(calls) == 3
+
+
+def test_persistent_network_failure_becomes_a_clear_error(capture):
+    _, queue = capture
+    queue += [llm.requests.ConnectionError()] * 5
+    with pytest.raises(LLMError, match="network error"):
+        AnthropicClient(KEY, sleep=lambda s: None).complete("S", MSGS)

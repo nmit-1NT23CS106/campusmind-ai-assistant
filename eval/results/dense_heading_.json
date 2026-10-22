@@ -1,0 +1,36 @@
+{
+  "retriever": "dense",
+  "strategy": "heading",
+  "chunk_kwargs": {},
+  "retriever_options": {},
+  "embedding_model": "BAAI/bge-small-en-v1.5",
+  "n_questions": 33,
+  "n_chunks": 45,
+  "coverage_ceiling": 1.0,
+  "hit@1": 0.818,
+  "hit@3": 0.909,
+  "hit@5": 0.97,
+  "mrr": 0.877,
+  "avg_latency_ms": 12.59,
+  "index_build_s": 0.02,
+  "misses": [
+    {
+      "id": "q02",
+      "question": "My attendance is 70%. Is there any way I can still write the exam?",
+      "rank": 5,
+      "top1": "exam_regulations > Exam day rules"
+    },
+    {
+      "id": "q05",
+      "question": "Do the matches I play for the college count as present?",
+      "rank": null,
+      "top1": "exam_regulations > Eligibility and hall ticket"
+    },
+    {
+      "id": "q09",
+      "question": "What grade do I get for 85 marks and how many points is it worth?",
+      "rank": 4,
+      "top1": "grading_rules > Course marks breakdown > Internal assessment"
+    }
+  ]
+}
