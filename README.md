@@ -4,6 +4,8 @@ An assistant for university policies and student data. A question goes to an **L
 **hybrid document retrieval (RAG)**, a **guarded text-to-SQL tool**, both, or a refusal, and answers with verified sources.
 Built with Python, FastAPI, Streamlit, SQLite, BM25 + embeddings, and a provider-agnostic LLM client.
 
+
+
 ```
 Question ──> LLM agent ──┬─> search_docs ──> BM25 + embeddings, merged with Reciprocal Rank Fusion ──> policy documents
  (student/admin)         ├─> query_sql  ──> guard ─> read-only DB ─> row-level scope ─> limit + timeout
